@@ -1,0 +1,5 @@
+name = "daily-macros-api"
+main = "worker/index.mjs"
+compatibility_date = "2025-04-01"
+workers_dev = true
+keep_vars = true

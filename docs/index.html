@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#f6f5ef">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https:; img-src 'self' data:; base-uri 'none'; object-src 'none'">
+  <title>一日三量 · 饮食记录</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <header class="top">
+    <div class="shell top-inner">
+      <a class="brand" href="./" aria-label="一日三量首页">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        一日三量
+      </a>
+      <div class="auth">
+        <span id="account-label" class="muted" hidden></span>
+        <button id="login" class="button secondary" type="button">GitHub 登录</button>
+        <button id="logout" class="button secondary" type="button" hidden>退出</button>
+      </div>
+    </div>
+  </header>
+  <main class="shell">
+    <section class="welcome" aria-labelledby="day-title">
+      <div>
+        <p id="date-label" class="date-label"></p>
+        <h1 id="day-title">今日摄入</h1>
+      </div>
+      <div class="date-actions" id="date-actions" hidden>
+        <button class="button quiet" type="button" id="today">回到今天</button>
+        <input id="day" type="date" aria-label="查看日期">
+      </div>
+    </section>
+    <div class="notice" id="guest">
+      <p id="guest-copy">登录后可查看你的私有记录，并在不同设备上继续记。</p>
+      <button type="button" id="preview" class="text-button">在本机试用</button>
+    </div>
+    <p id="status" role="status" aria-live="polite" hidden></p>
+    <section class="card summary" aria-labelledby="summary-title">
+      <div class="section-head">
+        <h2 id="summary-title">剩余可摄入</h2>
+        <button type="button" id="goals-button" class="button secondary" disabled>设置每日目标</button>
+      </div>
+      <div id="summary" class="summary-grid"></div>
+    </section>
+    <div class="content-grid">
+      <section class="card calculator" aria-labelledby="calc-title">
+        <div class="section-head">
+          <div>
+            <h2 id="calc-title">添加摄入</h2>
+            <p class="muted" id="calc-help">按配料表换算实际吃下的营养素。</p>
+          </div>
+          <button class="text-button" id="reset-food" type="button">清空</button>
+        </div>
+        <div class="segmented" role="group" aria-label="输入方式">
+          <button type="button" id="per100" aria-pressed="true">按每 100 克换算</button>
+          <button type="button" id="direct" aria-pressed="false">直接填摄入量</button>
+        </div>
+        <form id="intake-form">
+          <div class="food-fields">
+            <label>食物名称 <small>选填</small>
+              <input id="food-name" maxlength="60" placeholder="如无糖酸奶" autocomplete="off">
+            </label>
+            <label id="portion-field">实际吃了多少 <small>克</small>
+              <input id="portion" type="number" inputmode="decimal" min="0.01" max="10000" step="0.01" placeholder="如 60">
+            </label>
+          </div>
+          <fieldset>
+            <legend id="amount-legend">每 100 克含量</legend>
+            <div id="intake-fields" class="nutrient-fields"></div>
+          </fieldset>
+          <div class="result" id="result">
+            <span class="result-label" id="result-label">换算结果</span>
+            <div id="calculated" class="result-values" aria-live="polite"></div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="add" class="button primary" disabled>记入今天</button>
+            <button type="button" id="save-food" class="button secondary" disabled>存为常用</button>
+          </div>
+          <p id="form-note" class="muted note">只想临时算一下，直接看换算结果即可。</p>
+        </form>
+      </section>
+      <div class="side">
+        <section class="card" id="favorites-panel" aria-labelledby="favorites-title" aria-describedby="favorites-hint">
+          <div class="section-head">
+            <h2 id="favorites-title">常用食物</h2>
+          </div>
+          <p id="favorites-hint" class="muted">选一个食物，再填这次吃了多少克。</p>
+          <div id="favorites"></div>
+        </section>
+        <section class="card" aria-labelledby="records-title">
+          <div class="section-head">
+            <h2 id="records-title">今日记录</h2>
+            <span id="record-count" class="count" hidden></span>
+          </div>
+          <div id="records"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <dialog id="goals-dialog">
+    <form id="goals-form">
+      <div class="section-head">
+        <h2>每日目标</h2>
+        <button id="close-goals" type="button" class="text-button">关闭</button>
+      </div>
+      <p class="muted">按克设置三项营养素的每日目标。</p>
+      <div id="goal-fields" class="nutrient-fields"></div>
+      <p id="goal-status" role="status" hidden></p>
+      <button class="button primary" type="submit">保存目标</button>
+    </form>
+  </dialog>
+</body>
+</html>
