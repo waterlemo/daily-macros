@@ -3,7 +3,7 @@ import { hasAmount, validAmounts, validDate } from "../docs/domain.mjs";
 import { createCosStore } from "./cos-store.mjs";
 
 const idPattern = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
-const sessionLifetime = 8 * 60 * 60 * 1000;
+const sessionLifetime = 30 * 24 * 60 * 60 * 1000;
 const paths = date => ({
   goals: "settings", foods: "foods", records: "records/" + date
 });

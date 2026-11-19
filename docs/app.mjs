@@ -313,6 +313,9 @@ function chooseDay(day) {
 }
 
 function leave() {
+  try {
+    if (state.session && localStorage.getItem(sessionKey) === state.session) localStorage.removeItem(sessionKey);
+  } catch { /* in-memory state is also cleared */ }
   try { sessionStorage.removeItem(sessionKey); } catch { /* in-memory state is also cleared */ }
   Object.assign(state, {
     mode: "guest", ready: false, session: "", day: dateKey(),
@@ -351,7 +354,9 @@ async function signIn(event) {
   try {
     const { session } = await request("/auth/login", { passphrase: passphraseField.value }, "");
     if (typeof session !== "string" || !session) throw new Error("登录服务响应异常，请稍后再试。");
-    try { sessionStorage.setItem(sessionKey, session); } catch { /* the current tab can still use the session */ }
+    try { localStorage.setItem(sessionKey, session); } catch {
+      try { sessionStorage.setItem(sessionKey, session); } catch { /* the current tab can still use the session */ }
+    }
     $("login-form").reset();
     $("login-dialog").close();
     await loadAccount(session);
@@ -365,10 +370,12 @@ async function signIn(event) {
 
 function restoreSession() {
   if (!apiUrl) return;
-  try {
-    const session = sessionStorage.getItem(sessionKey);
-    if (session) void loadAccount(session);
-  } catch { /* the current tab can still log in */ }
+  let session;
+  try { session = localStorage.getItem(sessionKey); } catch { /* fall back to tab storage */ }
+  if (!session) {
+    try { session = sessionStorage.getItem(sessionKey); } catch { /* the current tab can still log in */ }
+  }
+  if (session) void loadAccount(session);
 }
 
 createFields("intake-fields", "amount-", false);
