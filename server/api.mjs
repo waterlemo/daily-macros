@@ -60,10 +60,11 @@ function readOperation(body) {
     return { key, apply: list => list.filter(item => item.id !== body.remove) };
   }
   const item = body.value;
-  const amountsKey = isFood ? "perHundred" : "amounts";
+  const per100 = isFood && item?.perHundred != null;
+  const amountsKey = per100 ? "perHundred" : "amounts";
   if (!item || typeof item.id !== "string" || !entryIdPattern.test(item.id) ||
       typeof item.name !== "string" || item.name.trim().length > 60 ||
-      (isFood && !item.name.trim()) || !validAmounts(item[amountsKey], isFood ? 10000 : 1000000) ||
+      (isFood && !item.name.trim()) || !validAmounts(item[amountsKey], per100 ? 10000 : 1000000) ||
       !hasAmount(item[amountsKey])) {
     throw new HttpError(400, "请检查营养素克数和食物名称。");
   }
@@ -133,7 +134,8 @@ export default {
         ? settings.then(current => read("dayGoal", value => operation.apply(value, current)))
         : read("dayGoal");
       const [current, selected, foods, records] = await Promise.all([settings, dayGoal, read("foods"), read("records")]);
-      return json({ ...goalData(current, selected), foods, records }, 200, origin);
+      return json({ ...goalData(current, selected), foods: foods.filter(food => food.perHundred),
+        directFoods: foods.filter(food => food.amounts), records }, 200, origin);
     } catch (error) {
       const status = error instanceof HttpError ? error.status : error instanceof GoalError ? 400 : 502;
       const message = status === 502 ? "同步服务遇到问题，请稍后重试。" : error.message;

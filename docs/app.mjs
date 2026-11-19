@@ -7,7 +7,7 @@ const storageKey = "daily-macros-preview";
 const sessionKey = "daily-macros-session";
 const state = {
   mode: "guest", day: dateKey(), today: dateKey(), ...goalData(null, null), records: [],
-  foods: [], ready: false, busy: false, reading: 0, session: "",
+  foods: [], directFoods: [], ready: false, busy: false, reading: 0, session: "",
   method: "per100", foodId: null, recordId: null, pendingEntry: null, goalEditor: null
 };
 
@@ -219,16 +219,18 @@ function renderLists() {
     $("favorites").append(element("p", message, "muted empty"));
     return;
   }
-  if (!state.foods.length) $("favorites").append(element("p", "保存一种食物后，它会出现在这里。", "muted empty"));
+  const favorites = [...state.foods, ...state.directFoods];
+  if (!favorites.length) $("favorites").append(element("p", "保存一种食物后，它会出现在这里。", "muted empty"));
   if (!state.records.length) $("records").append(element("p", "这天还没有记录。", "muted empty"));
-  for (const food of state.foods) {
+  for (const food of favorites) {
     const row = element("div", null, "item");
     const pick = element("button", null, "item-main item-pick");
     pick.type = "button";
     pick.disabled = state.busy;
-    pick.append(element("strong", food.name), element("p", "每 100 克 · " + summaryLine(food.perHundred), "muted"));
+    const method = food.perHundred ? "每 100 克" : "直接摄入";
+    pick.append(element("strong", food.name), element("p", method + " · " + summaryLine(food.perHundred ?? food.amounts), "muted"));
     pick.addEventListener("click", () => pickFood(food));
-    row.append(pick, itemButton("删除", () => remove("food", food), "删除常用食物 " + food.name));
+    row.append(pick, itemButton("删除", () => remove("food", food), "删除常用食物 " + food.name + "（" + method + "）"));
     $("favorites").append(row);
   }
   for (const record of [...state.records].reverse()) {
@@ -269,7 +271,7 @@ function updateCalculation() {
     return line;
   }));
   $("add").disabled = !state.ready || state.busy || !actual || !hasAmount(actual);
-  $("save-food").disabled = !state.ready || state.busy || !per100 || !baseValid || !hasAmount(input) || Boolean(state.recordId);
+  $("save-food").disabled = !state.ready || state.busy || !baseValid || !hasAmount(input) || Boolean(state.recordId);
   $("form-note").textContent = state.recordId ? "保存后会重新计算当日的剩余量。"
     : per100 ? "只想临时算一下，直接看换算结果即可。" : "只填这次摄入的营养素即可。";
   return actual;
@@ -287,12 +289,13 @@ function clearForm(method = state.method) {
 }
 
 function pickFood(food) {
-  clearForm("per100");
+  const per100 = Boolean(food.perHundred);
+  clearForm(per100 ? "per100" : "direct");
   state.foodId = food.id;
   $("food-name").value = food.name;
-  setFields("amount-", food.perHundred);
+  setFields("amount-", food.perHundred ?? food.amounts);
   render();
-  $("portion").focus();
+  $(per100 ? "portion" : "add").focus();
 }
 
 function editRecord(record) {
@@ -327,6 +330,7 @@ function localData() {
 
 function applyLocal(date, operation) {
   const data = localData();
+  let directFoods = data.directFoods ?? [];
   const records = data.days[date] || [];
   let settings = { defaultGoals: data.goals, goalProfiles: data.goalProfiles };
   let dayGoal = data.dayGoals?.[date] ?? null;
@@ -343,9 +347,14 @@ function applyLocal(date, operation) {
     else delete data.dayGoals[date];
   }
   if (operation?.type === "record") data.days[date] = changeList(records, operation);
-  if (operation?.type === "food") data.foods = changeList(data.foods, operation);
+  if (operation?.type === "food") {
+    if (operation.remove || operation.value.perHundred) data.foods = changeList(data.foods, operation);
+    if (operation.remove || operation.value.amounts) {
+      directFoods = data.directFoods = changeList(directFoods, operation);
+    }
+  }
   if (operation) localStorage.setItem(storageKey, JSON.stringify(data));
-  return { ...goalData(settings, dayGoal), records: data.days[date] || [], foods: data.foods };
+  return { ...goalData(settings, dayGoal), records: data.days[date] || [], foods: data.foods, directFoods };
 }
 
 function changeList(list, { value, remove }) {
@@ -414,7 +423,7 @@ function leave() {
   try { sessionStorage.removeItem(sessionKey); } catch { /* in-memory state is also cleared */ }
   Object.assign(state, {
     mode: "guest", ready: false, session: "", day: dateKey(),
-    today: dateKey(), ...goalData(null, null), records: [], foods: [], reading: state.reading + 1
+    today: dateKey(), ...goalData(null, null), records: [], foods: [], directFoods: [], reading: state.reading + 1
   });
   $("goals-dialog").close();
   clearForm("per100");
@@ -432,7 +441,7 @@ function openLogin() {
 }
 
 async function loadAccount(session) {
-  Object.assign(state, { mode: "account", session, ready: false, ...goalData(null, null), records: [], foods: [] });
+  Object.assign(state, { mode: "account", session, ready: false, ...goalData(null, null), records: [], foods: [], directFoods: [] });
   clearForm("per100");
   showStatus();
   await load();
@@ -521,11 +530,13 @@ $("save-food").addEventListener("click", async () => {
     $("food-name").setCustomValidity("");
     return;
   }
-  const perHundred = readFields("amount-");
-  const existing = state.foods.find(food => food.name === name);
+  const per100 = state.method === "per100";
+  const favorites = per100 ? state.foods : state.directFoods;
+  const amountsKey = per100 ? "perHundred" : "amounts";
+  const existing = favorites.find(food => food.name === name);
   const id = existing?.id || state.foodId || crypto.randomUUID();
   state.foodId = id;
-  if (await mutate({ type: "food", value: { id, name, perHundred } }, "已保存常用食物。")) {
+  if (await mutate({ type: "food", value: { id, name, [amountsKey]: readFields("amount-") } }, "已保存常用食物。")) {
     state.foodId = id;
     render();
   }
