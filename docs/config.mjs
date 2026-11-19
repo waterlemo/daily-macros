@@ -1,2 +1,2 @@
-// Set this to the HTTPS URL of the deployed API, without a path or trailing slash.
+// Set this to the Tencent SCF function URL, without a path or trailing slash.
 export const apiUrl = "";

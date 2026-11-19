@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+cd "$(dirname "$0")"
+exec /var/lang/node20/bin/node server/tencent.mjs

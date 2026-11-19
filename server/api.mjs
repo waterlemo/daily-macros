@@ -32,12 +32,19 @@ function settings(env) {
       !/^[\w-]+\/[\w.-]+$/.test(env.DATA_REPOSITORY || "") || !challengePattern.test(env.SESSION_KEY || "")) {
     throw new HttpError(503, "登录服务尚未配置。");
   }
+  if (!URL.canParse(env.SITE_URL) || !URL.canParse(env.API_URL)) {
+    throw new HttpError(503, "登录地址尚未配置。");
+  }
   const site = new URL(env.SITE_URL);
   if (site.protocol !== "https:" || site.search || site.hash || site.username || site.password) {
     throw new HttpError(503, "网站地址配置不正确。");
   }
+  const api = new URL(env.API_URL);
+  if (api.protocol !== "https:" || api.href !== api.origin + "/") {
+    throw new HttpError(503, "同步服务地址配置不正确。");
+  }
   return {
-    site, repo: "/repos/" + env.DATA_REPOSITORY,
+    site, callback: new URL("/auth/callback", api).href, repo: "/repos/" + env.DATA_REPOSITORY,
     userId: env.GITHUB_USER_ID, clientId: env.GITHUB_CLIENT_ID,
     secret: env.GITHUB_CLIENT_SECRET,
     key: crypto.subtle.importKey("raw", fromUrlSafe(env.SESSION_KEY), "AES-GCM", false, ["encrypt", "decrypt"])
@@ -107,10 +114,6 @@ function sendToSite(config, name, value) {
   return redirect(destination);
 }
 
-function callbackUrl(url) {
-  return new URL("/auth/callback", url).href;
-}
-
 async function startLogin(config, url) {
   const challenge = url.searchParams.get("challenge");
   if (!challengePattern.test(challenge || "")) throw new HttpError(400, "请从网站登录。");
@@ -118,7 +121,7 @@ async function startLogin(config, url) {
   const destination = new URL("https://github.com/login/oauth/authorize");
   destination.search = new URLSearchParams({
     client_id: config.clientId,
-    redirect_uri: callbackUrl(url),
+    redirect_uri: config.callback,
     state: await seal(config, "github-state", { challenge, verifier }, 600),
     code_challenge: await challengeFor(verifier),
     code_challenge_method: "S256"
@@ -136,7 +139,7 @@ async function finishGithubLogin(config, url) {
       headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         client_id: config.clientId, client_secret: config.secret,
-        redirect_uri: callbackUrl(url), code, code_verifier: state.verifier
+        redirect_uri: config.callback, code, code_verifier: state.verifier
       })
     });
     const auth = await response.json();
