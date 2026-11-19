@@ -1,13 +1,12 @@
-import { apiUrl } from "./config.mjs";
+import { apiUrl } from "./config.mjs?v=cos";
 import { nutrients, zero, convert, totals, validAmounts, hasAmount, dateKey, validDate, grams } from "./domain.mjs";
 
 const $ = id => document.getElementById(id);
 const storageKey = "daily-macros-preview";
 const sessionKey = "daily-macros-session";
-const verifierKey = "daily-macros-verifier";
 const state = {
   mode: "guest", day: dateKey(), today: dateKey(), goals: null, records: [],
-  foods: [], ready: false, busy: false, reading: 0, session: "", account: "",
+  foods: [], ready: false, busy: false, reading: 0, session: "",
   method: "per100", foodId: null, recordId: null, pendingEntry: null
 };
 
@@ -65,7 +64,7 @@ function render() {
   $("logout").disabled = state.busy;
   $("logout").textContent = signedIn ? "退出" : "退出试用";
   $("account-label").hidden = !active;
-  $("account-label").textContent = signedIn ? "@" + state.account : "本机试用";
+  $("account-label").textContent = signedIn ? "已登录" : "本机试用";
   $("guest").hidden = signedIn;
   $("guest-copy").textContent = active
     ? "试用记录只存在当前浏览器。"
@@ -316,7 +315,7 @@ function chooseDay(day) {
 function leave() {
   try { sessionStorage.removeItem(sessionKey); } catch { /* in-memory state is also cleared */ }
   Object.assign(state, {
-    mode: "guest", ready: false, session: "", account: "", day: dateKey(),
+    mode: "guest", ready: false, session: "", day: dateKey(),
     today: dateKey(), goals: null, records: [], foods: [], reading: state.reading + 1
   });
   $("goals-dialog").close();
@@ -324,52 +323,64 @@ function leave() {
   showStatus();
 }
 
-const urlSafe = bytes => btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-async function signIn() {
+function openLogin() {
   if (!apiUrl) {
-    showStatus("GitHub 登录服务尚未配置。你可以先在本机试用。", true);
+    showStatus("云同步尚未配置。你可以先在本机试用。", true);
     return;
   }
+  $("login-form").reset();
+  showStatus("", false, "login-status");
+  $("login-dialog").showModal();
+}
+
+async function loadAccount(session) {
+  Object.assign(state, { mode: "account", session, ready: false, goals: null, records: [], foods: [] });
+  clearForm("per100");
+  showStatus();
+  await load();
+}
+
+async function signIn(event) {
+  event.preventDefault();
+  const submit = $("submit-login");
+  if (submit.disabled) return;
+  submit.disabled = $("close-login").disabled = true;
+  const passphraseField = $("passphrase");
+  passphraseField.readOnly = true;
+  showStatus("正在登录…", false, "login-status");
   try {
-    const verifier = urlSafe(crypto.getRandomValues(new Uint8Array(32)));
-    const challenge = urlSafe(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
-    sessionStorage.setItem(verifierKey, verifier);
-    location.assign(apiUrl + "/auth/start?challenge=" + challenge);
-  } catch {
-    showStatus("无法开始登录。请在手机浏览器的普通窗口重试。", true);
+    const { session } = await request("/auth/login", { passphrase: passphraseField.value }, "");
+    if (typeof session !== "string" || !session) throw new Error("登录服务响应异常，请稍后再试。");
+    try { sessionStorage.setItem(sessionKey, session); } catch { /* the current tab can still use the session */ }
+    $("login-form").reset();
+    $("login-dialog").close();
+    await loadAccount(session);
+  } catch (error) {
+    showStatus(error.message, true, "login-status");
+  } finally {
+    submit.disabled = $("close-login").disabled = false;
+    passphraseField.readOnly = false;
   }
 }
 
-async function restoreSession() {
+function restoreSession() {
+  if (!apiUrl) return;
   try {
-    const fragment = new URLSearchParams(location.hash.slice(1));
-    const handoff = fragment.get("handoff");
-    const authError = fragment.get("auth_error");
-    if (handoff || authError) {
-      history.replaceState(null, "", location.pathname + location.search);
-      const verifier = sessionStorage.getItem(verifierKey);
-      sessionStorage.removeItem(verifierKey);
-      if (authError === "denied") throw new Error("此网站的私人记录仅供所有者访问。");
-      if (authError || !verifier || !apiUrl) throw new Error("登录已中断，请重新开始。");
-      const data = await request("/auth/claim", { handoff, verifier }, "");
-      sessionStorage.setItem(sessionKey, JSON.stringify(data));
-    }
-    const cached = apiUrl && JSON.parse(sessionStorage.getItem(sessionKey) || "null");
-    if (cached?.session) {
-      Object.assign(state, { mode: "account", session: cached.session, account: cached.account, ready: false });
-      render();
-      await load();
-    }
-  } catch (error) {
-    showStatus(error.message, true);
-  }
+    const session = sessionStorage.getItem(sessionKey);
+    if (session) void loadAccount(session);
+  } catch { /* the current tab can still log in */ }
 }
 
 createFields("intake-fields", "amount-", false);
 createFields("goal-fields", "goal-", true);
 for (const { key } of nutrients) $("goal-" + key).max = "10000";
 setMethod("per100");
-$("login").addEventListener("click", signIn);
+$("login").addEventListener("click", openLogin);
+$("login-form").addEventListener("submit", signIn);
+$("close-login").addEventListener("click", () => $("login-dialog").close());
+$("login-dialog").addEventListener("cancel", event => {
+  if ($("submit-login").disabled) event.preventDefault();
+});
 $("logout").addEventListener("click", leave);
 $("preview").addEventListener("click", () => {
   state.mode = "demo";

@@ -43,8 +43,8 @@ main { padding-bottom: 40px; }
 .text-button:hover:enabled { text-decoration: underline; }
 .muted { color: var(--muted); font-size: .89rem; line-height: 1.55; }
 .notice { border: 1px solid #dde4d4; background: #edf1e6; border-radius: 12px; padding: 4px 14px; margin-bottom: 15px; font-size: .88rem; }
-#status, #goal-status { margin: 12px 0; padding: 11px 14px; border-radius: 10px; background: #e8efe2; color: #324c35; font-size: .88rem; }
-#status[data-error="true"], #goal-status[data-error="true"] { background: #f7e4dc; color: #713522; }
+#status, #goal-status, #login-status { margin: 12px 0; padding: 11px 14px; border-radius: 10px; background: #e8efe2; color: #324c35; font-size: .88rem; }
+#status[data-error="true"], #goal-status[data-error="true"], #login-status[data-error="true"] { background: #f7e4dc; color: #713522; }
 .card { background: #fffefa; border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
 .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 15px; }
 .amber { --tint: #fbefcf; --tone: #78501d; --track: #eedcb3; }
@@ -96,6 +96,8 @@ dialog { width: min(440px, calc(100% - 28px)); padding: 0; background: #fffefa; 
 dialog::backdrop { background: #222a21a0; }
 dialog form { padding: 20px; }
 dialog .nutrient-fields { margin: 16px 0; }
+.passphrase-field { margin: 16px 0; }
+.passphrase-field input { display: block; width: 100%; margin-top: 6px; }
 @media (max-width: 780px) {
   .content-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
   .side { gap: 12px; }

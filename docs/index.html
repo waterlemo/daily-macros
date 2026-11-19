@@ -12,8 +12,8 @@
   <link rel="icon" href="./icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./app.mjs"></script>
+  <link rel="stylesheet" href="./style.css?v=cos">
+  <script type="module" src="./app.mjs?v=cos"></script>
 </head>
 <body>
   <header class="top">
@@ -24,7 +24,7 @@
       </a>
       <div class="auth">
         <span id="account-label" class="muted" hidden></span>
-        <button id="login" class="button secondary" type="button">GitHub 登录</button>
+        <button id="login" class="button secondary" type="button">口令登录</button>
         <button id="logout" class="button secondary" type="button" hidden>退出</button>
       </div>
     </div>
@@ -107,6 +107,19 @@
       </div>
     </div>
   </main>
+  <dialog id="login-dialog" aria-labelledby="login-title">
+    <form id="login-form">
+      <div class="section-head">
+        <h2 id="login-title">口令登录</h2>
+        <button id="close-login" type="button" class="text-button">关闭</button>
+      </div>
+      <label class="passphrase-field">个人口令
+        <input id="passphrase" type="password" maxlength="128" autocomplete="current-password" required autofocus>
+      </label>
+      <p id="login-status" role="status" hidden></p>
+      <button id="submit-login" class="button primary" type="submit">登录</button>
+    </form>
+  </dialog>
   <dialog id="goals-dialog">
     <form id="goals-form">
       <div class="section-head">

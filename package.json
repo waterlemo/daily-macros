@@ -1,0 +1,7 @@
+{
+  "name": "daily-macros",
+  "version": "1.0.0",
+  "private": true,
+  "engines": { "node": ">=20.19" },
+  "dependencies": { "cos-nodejs-sdk-v5": "3.0.0" }
+}
