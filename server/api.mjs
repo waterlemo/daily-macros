@@ -1,13 +1,13 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { hasAmount, validAmounts, validDate } from "../docs/domain.mjs";
+import { entryIdPattern, GoalError, goalData, goalOperation } from "../docs/targets.mjs";
 import { createCosStore } from "./cos-store.mjs";
 
-const idPattern = /^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i;
 const sessionLifetime = 30 * 24 * 60 * 60 * 1000;
 const paths = date => ({
-  goals: "settings", foods: "foods", records: "records/" + date
+  settings: "settings", foods: "foods", records: "records/" + date, dayGoal: "targets/" + date
 });
-const empty = { goals: null, foods: [], records: [] };
+const empty = { settings: null, foods: [], records: [], dayGoal: null };
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -53,18 +53,15 @@ function signedIn(config, authorization) {
 }
 
 function readOperation(body) {
-  if (body.type === "goals" && validAmounts(body.amounts, 1000000)) {
-    return { key: "goals", apply: () => body.amounts };
-  }
   if (body.type !== "food" && body.type !== "record") throw new HttpError(400, "要保存的数据格式有误。");
   const isFood = body.type === "food";
   const key = isFood ? "foods" : "records";
-  if (typeof body.remove === "string" && idPattern.test(body.remove)) {
+  if (typeof body.remove === "string" && entryIdPattern.test(body.remove)) {
     return { key, apply: list => list.filter(item => item.id !== body.remove) };
   }
   const item = body.value;
   const amountsKey = isFood ? "perHundred" : "amounts";
-  if (!item || typeof item.id !== "string" || !idPattern.test(item.id) ||
+  if (!item || typeof item.id !== "string" || !entryIdPattern.test(item.id) ||
       typeof item.name !== "string" || item.name.trim().length > 60 ||
       (isFood && !item.name.trim()) || !validAmounts(item[amountsKey], isFood ? 10000 : 1000000) ||
       !hasAmount(item[amountsKey])) {
@@ -97,7 +94,7 @@ function json(data, status, origin) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, makeStore = createCosStore) {
     let origin;
     try {
       const url = new URL(request.url);
@@ -122,18 +119,24 @@ export default {
       const body = writing ? await readBody(request) : null;
       const date = reading ? url.searchParams.get("date") : body.date;
       if (!validDate(date)) throw new HttpError(400, "日期无效。");
-      const operation = writing ? readOperation(body) : null;
-      const store = createCosStore(env);
-      const entries = await Promise.all(Object.entries(paths(date)).map(async ([key, path]) => {
-        if (operation?.key !== key) return [key, await store.read(path, empty[key])];
-        const result = await store.change(path, empty[key], operation.apply);
+      const operation = writing ? goalOperation(body) ?? readOperation(body) : null;
+      const store = makeStore(env);
+      const locations = paths(date);
+      const read = async (key, apply = operation?.apply) => {
+        if (operation?.key !== key) return store.read(locations[key], empty[key]);
+        const result = await store.change(locations[key], empty[key], apply);
         if (!result) throw new HttpError(409, "另一台设备正在更新，请稍后重试。");
-        return [key, result.value];
-      }));
-      return json(Object.fromEntries(entries), 200, origin);
+        return result.value;
+      };
+      const settings = read("settings");
+      const dayGoal = operation?.key === "dayGoal"
+        ? settings.then(current => read("dayGoal", value => operation.apply(value, current)))
+        : read("dayGoal");
+      const [current, selected, foods, records] = await Promise.all([settings, dayGoal, read("foods"), read("records")]);
+      return json({ ...goalData(current, selected), foods, records }, 200, origin);
     } catch (error) {
-      const status = error instanceof HttpError ? error.status : 502;
-      const message = error instanceof HttpError ? error.message : "同步服务遇到问题，请稍后重试。";
+      const status = error instanceof HttpError ? error.status : error instanceof GoalError ? 400 : 502;
+      const message = status === 502 ? "同步服务遇到问题，请稍后重试。" : error.message;
       if (status === 502) console.error("Daily Macros storage error:", error.code || error.name || "unknown");
       return json({ error: message }, status, origin);
     }

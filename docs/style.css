@@ -11,7 +11,7 @@
 }
 body { margin: 0; min-width: 280px; }
 a { color: inherit; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: default; opacity: .5; }
 :focus-visible { outline: 3px solid #5c795b; outline-offset: 3px; }
@@ -47,6 +47,8 @@ main { padding-bottom: 40px; }
 #status[data-error="true"], #goal-status[data-error="true"], #login-status[data-error="true"] { background: #f7e4dc; color: #713522; }
 .card { background: #fffefa; border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
 .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 15px; }
+.day-goal-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.day-goal-form select { flex: 1 1 130px; max-width: 280px; min-width: 0; }
 .amber { --tint: #fbefcf; --tone: #78501d; --track: #eedcb3; }
 .green { --tint: #e8f0df; --tone: #365339; --track: #d3dfca; }
 .violet { --tint: #eee8f4; --tone: #604d73; --track: #e0d6e9; }
@@ -62,14 +64,14 @@ main { padding-bottom: 40px; }
 .metric progress::-moz-progress-bar { background: var(--tone); }
 .content-grid { display: grid; grid-template-columns: 1.45fr 1fr; align-items: start; gap: 16px; margin-top: 16px; }
 .side { display: grid; gap: 16px; }
-.section-head .muted, #favorites-hint, #goals-form > p { margin-top: 5px; }
+.section-head .muted, #favorites-hint { margin-top: 5px; }
 .segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: #f0f0e8; border-radius: 12px; padding: 4px; margin: 16px 0; }
 .segmented button { min-height: 42px; border: 1px solid transparent; color: #555c50; background: transparent; border-radius: 9px; font-size: .89rem; font-weight: 660; }
 .segmented button[aria-pressed="true"] { background: #fffefa; color: #2d4934; border-color: #e2e7da; }
 .food-fields, .nutrient-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .nutrient-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 label { display: block; font-size: .89rem; font-weight: 620; }
-input { color: #22291e; min-width: 0; min-height: 44px; border: 1px solid #daddd0; border-radius: 9px; background: #fff; padding: 0 10px; font-size: 1rem; }
+input, select { color: #22291e; min-width: 0; min-height: 44px; border: 1px solid #daddd0; border-radius: 9px; background: #fff; padding: 0 10px; font-size: 1rem; }
 label input { display: block; width: 100%; margin-top: 6px; }
 input::placeholder { color: #777e72; }
 fieldset { min-width: 0; padding: 0; margin: 17px 0 0; border: 0; }
@@ -96,6 +98,10 @@ dialog { width: min(440px, calc(100% - 28px)); padding: 0; background: #fffefa; 
 dialog::backdrop { background: #222a21a0; }
 dialog form { padding: 20px; }
 dialog .nutrient-fields { margin: 16px 0; }
+.goal-dialog-content { padding: 20px; }
+.goal-dialog-content h3 { margin: 0; font-size: 1rem; }
+.goal-dialog-content form { padding: 10px 0 0; }
+.goal-profiles-heading, #goal-name-field { margin-top: 14px; }
 .passphrase-field { margin: 16px 0; }
 .passphrase-field input { display: block; width: 100%; margin-top: 6px; }
 @media (max-width: 780px) {

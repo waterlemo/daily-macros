@@ -18,7 +18,7 @@ with ZipFile(args.output, "x", ZIP_DEFLATED) as archive:
     bootstrap.external_attr = 0o100755 << 16
     bootstrap.compress_type = ZIP_DEFLATED
     archive.writestr(bootstrap, (project / "deploy/scf_bootstrap").read_text(encoding="utf-8"))
-    for source in ("server/tencent.mjs", "server/api.mjs", "server/cos-store.mjs", "docs/domain.mjs"):
+    for source in ("server/tencent.mjs", "server/api.mjs", "server/cos-store.mjs", "docs/domain.mjs", "docs/targets.mjs"):
         archive.write(project / source, source)
     for source in sorted(dependencies.rglob("*")):
         relative = source.relative_to(dependencies)

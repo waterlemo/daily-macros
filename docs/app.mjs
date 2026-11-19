@@ -1,13 +1,14 @@
 import { apiUrl } from "./config.mjs?v=cos";
 import { nutrients, zero, convert, totals, validAmounts, hasAmount, dateKey, validDate, grams } from "./domain.mjs";
+import { goalData, goalOperation } from "./targets.mjs";
 
 const $ = id => document.getElementById(id);
 const storageKey = "daily-macros-preview";
 const sessionKey = "daily-macros-session";
 const state = {
-  mode: "guest", day: dateKey(), today: dateKey(), goals: null, records: [],
+  mode: "guest", day: dateKey(), today: dateKey(), ...goalData(null, null), records: [],
   foods: [], ready: false, busy: false, reading: 0, session: "",
-  method: "per100", foodId: null, recordId: null, pendingEntry: null
+  method: "per100", foodId: null, recordId: null, pendingEntry: null, goalEditor: null
 };
 
 function element(tag, text, className) {
@@ -80,12 +81,13 @@ function render() {
   $("day").disabled = state.busy || $("goals-dialog").open;
   $("today").disabled = isToday || state.busy;
   $("close-goals").disabled = state.busy;
-  $("goals-button").textContent = state.goals ? "调整每日目标" : "设置每日目标";
   $("goals-button").disabled = !editable;
   $("records-title").textContent = isToday ? "今日记录" : "当日记录";
   $("add").textContent = state.recordId ? "保存修改" : isToday ? "记入今天" : "记入 " + shortDate(state.day);
   $("save-food").textContent = state.foodId ? "更新常用食物" : "存为常用";
   renderSummary();
+  renderGoalChoice(isToday);
+  if ($("goals-dialog").open) renderGoalManager();
   renderLists();
   updateCalculation();
 }
@@ -115,6 +117,86 @@ function renderSummary() {
 
 function summaryLine(amounts) {
   return nutrients.map(({ key, label }) => label + " " + grams(amounts[key]) + " 克").join(" · ");
+}
+
+function updateGoalChoice() {
+  const select = $("day-goal-choice");
+  $("apply-goal").disabled = !state.ready || state.busy || select.value === select.dataset.applied;
+}
+
+function renderGoalChoice(isToday) {
+  const form = $("day-goal-form");
+  form.hidden = !state.ready || (!state.goalProfiles.length && !state.dayGoal);
+  if (form.hidden) return;
+  $("day-goal-label").textContent = isToday ? "今日目标" : "当日目标";
+  const select = $("day-goal-choice");
+  const options = [new Option(state.defaultGoals ? "默认目标" : "默认目标（未设置）", ""),
+    ...state.goalProfiles.map(profile => new Option(profile.name, profile.id))];
+  const active = state.dayGoal;
+  let applied = "";
+  if (active) {
+    const profile = state.goalProfiles.find(item => item.id === active.id);
+    if (profile?.name === active.name && nutrients.every(({ key }) => profile.amounts[key] === active.amounts[key])) {
+      applied = active.id;
+    } else {
+      applied = "saved";
+      options.splice(1, 0, new Option(active.name + "（当日已保存）", applied));
+    }
+  }
+  select.replaceChildren(...options);
+  select.value = select.dataset.applied = applied;
+  select.disabled = state.busy;
+  updateGoalChoice();
+}
+
+function renderGoalManager() {
+  const editing = Boolean(state.goalEditor);
+  $("goal-overview").hidden = editing;
+  $("goals-form").hidden = !editing;
+  $("goals-form").inert = state.busy;
+  $("edit-default-goal").disabled = state.busy;
+  $("delete-default-goal").disabled = state.busy;
+  $("delete-default-goal").hidden = !state.defaultGoals;
+  $("add-goal-profile").disabled = state.busy;
+  $("save-goal").disabled = state.busy;
+  $("cancel-goal").disabled = state.busy;
+  if (editing) return;
+  $("goal-default-summary").textContent = state.defaultGoals ? summaryLine(state.defaultGoals) : "保存后每天自动沿用。";
+  $("goal-profiles").replaceChildren(...state.goalProfiles.map(profile => {
+    const row = element("div", null, "item");
+    const info = element("div", null, "item-main");
+    info.append(element("strong", profile.name), element("p", summaryLine(profile.amounts), "muted"));
+    row.append(info, itemButton("修改", () => editGoal("goalProfile", profile), "修改方案 " + profile.name),
+      itemButton("删除", () => deleteGoalProfile(profile), "删除方案 " + profile.name));
+    return row;
+  }));
+}
+
+function editGoal(type, profile) {
+  state.goalEditor = { type, id: type === "goalProfile" ? profile?.id ?? crypto.randomUUID() : null };
+  const isDefault = type === "goals";
+  $("goal-editor-title").textContent = isDefault ? "编辑默认目标" : profile ? "修改方案" : "新增方案";
+  $("goal-name-field").hidden = isDefault;
+  $("goal-name").disabled = isDefault;
+  $("goal-name").value = profile?.name ?? "";
+  setFields("goal-", profile?.amounts ?? state.defaultGoals);
+  showStatus("", false, "goal-status");
+  renderGoalManager();
+  $(isDefault ? "goal-carbs" : "goal-name").focus();
+}
+
+function closeGoalEditor() {
+  const button = state.goalEditor?.type === "goals" ? "edit-default-goal" : "add-goal-profile";
+  state.goalEditor = null;
+  renderGoalManager();
+  $(button).focus();
+}
+
+async function deleteGoalProfile(profile) {
+  if (!confirm("删除目标方案「" + profile.name + "」？")) return;
+  if (await mutate({ type: "goalProfile", remove: profile.id }, "已删除方案。", "goal-status")) {
+    $("add-goal-profile").focus();
+  }
 }
 
 function itemButton(text, action, label = text) {
@@ -246,11 +328,24 @@ function localData() {
 function applyLocal(date, operation) {
   const data = localData();
   const records = data.days[date] || [];
-  if (operation?.type === "goals") data.goals = operation.amounts;
+  let settings = { defaultGoals: data.goals, goalProfiles: data.goalProfiles };
+  let dayGoal = data.dayGoals?.[date] ?? null;
+  const goal = operation && goalOperation(operation);
+  if (goal?.key === "settings") {
+    settings = goal.apply(settings);
+    data.goals = settings.defaultGoals;
+    data.goalProfiles = settings.goalProfiles;
+  }
+  if (goal?.key === "dayGoal") {
+    dayGoal = goal.apply(dayGoal, settings);
+    data.dayGoals ??= {};
+    if (dayGoal) data.dayGoals[date] = dayGoal;
+    else delete data.dayGoals[date];
+  }
   if (operation?.type === "record") data.days[date] = changeList(records, operation);
   if (operation?.type === "food") data.foods = changeList(data.foods, operation);
   if (operation) localStorage.setItem(storageKey, JSON.stringify(data));
-  return { goals: data.goals, records: data.days[date] || [], foods: data.foods };
+  return { ...goalData(settings, dayGoal), records: data.days[date] || [], foods: data.foods };
 }
 
 function changeList(list, { value, remove }) {
@@ -306,7 +401,7 @@ function remove(type, entry) {
 
 function chooseDay(day) {
   if (!validDate(day) || day > state.today || state.busy || day === state.day) return;
-  Object.assign(state, { day, ready: false, records: [] });
+  Object.assign(state, { day, ready: false, dayGoal: null, goals: null, records: [] });
   clearForm();
   showStatus();
   void load();
@@ -319,7 +414,7 @@ function leave() {
   try { sessionStorage.removeItem(sessionKey); } catch { /* in-memory state is also cleared */ }
   Object.assign(state, {
     mode: "guest", ready: false, session: "", day: dateKey(),
-    today: dateKey(), goals: null, records: [], foods: [], reading: state.reading + 1
+    today: dateKey(), ...goalData(null, null), records: [], foods: [], reading: state.reading + 1
   });
   $("goals-dialog").close();
   clearForm("per100");
@@ -337,7 +432,7 @@ function openLogin() {
 }
 
 async function loadAccount(session) {
-  Object.assign(state, { mode: "account", session, ready: false, goals: null, records: [], foods: [] });
+  Object.assign(state, { mode: "account", session, ready: false, ...goalData(null, null), records: [], foods: [] });
   clearForm("per100");
   showStatus();
   await load();
@@ -436,20 +531,44 @@ $("save-food").addEventListener("click", async () => {
   }
 });
 $("goals-button").addEventListener("click", () => {
-  setFields("goal-", state.goals);
+  state.goalEditor = null;
   showStatus("", false, "goal-status");
+  renderGoalManager();
   $("goals-dialog").showModal();
+});
+$("edit-default-goal").addEventListener("click", () => editGoal("goals"));
+$("delete-default-goal").addEventListener("click", async () => {
+  if (confirm("删除默认目标？") &&
+      await mutate({ type: "goals", amounts: null }, "已删除默认目标。", "goal-status")) {
+    $("edit-default-goal").focus();
+  }
+});
+$("add-goal-profile").addEventListener("click", () => editGoal("goalProfile"));
+$("cancel-goal").addEventListener("click", () => {
+  showStatus("", false, "goal-status");
+  closeGoalEditor();
 });
 $("close-goals").addEventListener("click", () => $("goals-dialog").close());
 $("goals-dialog").addEventListener("cancel", event => { if (state.busy) event.preventDefault(); });
 $("goals-dialog").addEventListener("close", render);
 $("goals-form").addEventListener("submit", async event => {
   event.preventDefault();
+  const editor = state.goalEditor;
+  if (!editor) return;
   const amounts = readFields("goal-");
-  if (await mutate({ type: "goals", amounts }, "已保存每日目标。", "goal-status")) {
-    $("goals-dialog").close();
-    showStatus("已保存每日目标。");
+  const isDefault = editor.type === "goals";
+  const operation = isDefault ? { type: "goals", amounts }
+    : { type: "goalProfile", value: { id: editor.id, name: $("goal-name").value, amounts } };
+  if (await mutate(operation, isDefault ? "已保存默认目标。" : "已保存目标方案。", "goal-status")) {
+    closeGoalEditor();
   }
+});
+$("day-goal-choice").addEventListener("change", updateGoalChoice);
+$("day-goal-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const profileId = $("day-goal-choice").value;
+  if (profileId === "saved" || $("apply-goal").disabled) return;
+  await mutate({ type: "dayGoal", profileId: profileId || null }, profileId ? "已应用到当日。" : "当日已改用默认目标。");
 });
 
 function refreshDay() {

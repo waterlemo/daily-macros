@@ -12,8 +12,8 @@
   <link rel="icon" href="./icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./style.css?v=cos">
-  <script type="module" src="./app.mjs?v=30d"></script>
+  <link rel="stylesheet" href="./style.css?v=goals">
+  <script type="module" src="./app.mjs?v=goals"></script>
 </head>
 <body>
   <header class="top">
@@ -48,8 +48,13 @@
     <section class="card summary" aria-labelledby="summary-title">
       <div class="section-head">
         <h2 id="summary-title">剩余可摄入</h2>
-        <button type="button" id="goals-button" class="button secondary" disabled>设置每日目标</button>
+        <button type="button" id="goals-button" class="button secondary" disabled>管理目标</button>
       </div>
+      <form id="day-goal-form" class="day-goal-form" hidden>
+        <label for="day-goal-choice" id="day-goal-label">今日目标</label>
+        <select id="day-goal-choice"></select>
+        <button type="submit" id="apply-goal" class="button secondary">应用</button>
+      </form>
       <div id="summary" class="summary-grid"></div>
     </section>
     <div class="content-grid">
@@ -120,17 +125,40 @@
       <button id="submit-login" class="button primary" type="submit">登录</button>
     </form>
   </dialog>
-  <dialog id="goals-dialog">
-    <form id="goals-form">
+  <dialog id="goals-dialog" aria-labelledby="goals-dialog-title">
+    <div class="goal-dialog-content">
       <div class="section-head">
-        <h2>每日目标</h2>
+        <h2 id="goals-dialog-title">管理目标</h2>
         <button id="close-goals" type="button" class="text-button">关闭</button>
       </div>
-      <p class="muted">按克设置三项营养素的每日目标。</p>
-      <div id="goal-fields" class="nutrient-fields"></div>
       <p id="goal-status" role="status" hidden></p>
-      <button class="button primary" type="submit">保存目标</button>
-    </form>
+      <div id="goal-overview">
+        <div class="item">
+          <div class="item-main">
+            <strong>默认目标</strong>
+            <p id="goal-default-summary" class="muted"></p>
+          </div>
+          <button id="edit-default-goal" type="button" class="text-button" aria-label="编辑默认目标">编辑</button>
+          <button id="delete-default-goal" type="button" class="text-button" aria-label="删除默认目标" hidden>删除</button>
+        </div>
+        <div class="section-head goal-profiles-heading">
+          <h3>目标方案</h3>
+          <button id="add-goal-profile" type="button" class="button secondary">新增方案</button>
+        </div>
+        <div id="goal-profiles"></div>
+      </div>
+      <form id="goals-form" hidden>
+        <h3 id="goal-editor-title"></h3>
+        <label id="goal-name-field">方案名称
+          <input id="goal-name" type="text" maxlength="40" placeholder="如训练日" required>
+        </label>
+        <div id="goal-fields" class="nutrient-fields"></div>
+        <div class="form-actions">
+          <button id="save-goal" class="button primary" type="submit">保存</button>
+          <button id="cancel-goal" class="button quiet" type="button">取消</button>
+        </div>
+      </form>
+    </div>
   </dialog>
 </body>
 </html>
