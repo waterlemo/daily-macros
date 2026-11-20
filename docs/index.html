@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <meta name="theme-color" content="#f6f5ef">
+  <meta name="theme-color" content="#f4f5f8">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="一日三量">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' https:; img-src 'self' data:; base-uri 'none'; object-src 'none'">
@@ -12,30 +12,33 @@
   <link rel="icon" href="./icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./style.css?v=weight">
-  <script type="module" src="./app.mjs?v=weight"></script>
+  <link rel="stylesheet" href="./style.css?v=health1">
+  <script type="module" src="./app.mjs?v=health1"></script>
 </head>
 <body>
   <header class="top">
     <div class="shell top-inner">
-      <a class="brand" href="./" aria-label="一日三量首页">
+      <a class="brand" href="#intake" aria-label="一日三量首页">
         <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
         一日三量
       </a>
-      <div class="auth">
-        <span id="account-label" class="muted" hidden></span>
-        <button id="login" class="button secondary" type="button">口令登录</button>
-        <button id="logout" class="button secondary" type="button" hidden>退出</button>
-      </div>
-    </div>
-  </header>
-  <div class="shell app-layout">
-  <aside class="app-sidebar">
+        <aside class="app-sidebar">
     <nav aria-label="记录分区">
       <a id="nav-intake" href="#intake" aria-current="page">饮食</a>
       <a id="nav-weight" href="#weight">体重</a>
     </nav>
   </aside>
+      <div class="preferences"><label class="theme"><span>配色</span><select id="tone" aria-label="界面配色"><option value="sky">晴空蓝</option><option value="grape">葡萄紫</option><option value="lagoon">礁湖青</option><option value="berry">莓果红</option></select></label>
+      <div class="auth">
+        <span id="account-label" class="muted" hidden></span>
+        <button id="login" class="button secondary" type="button">口令登录</button>
+        <button id="logout" class="button secondary" type="button" hidden>退出</button>
+      </div>
+      </div>
+    </div>
+  </header>
+  <div class="shell app-layout">
+
   <main>
     <div class="notice" id="guest">
       <p id="guest-copy">登录后可查看你的私有记录，并在不同设备上继续记。</p>
@@ -55,7 +58,7 @@
     </section>
     <section class="card summary" aria-labelledby="summary-title">
       <div class="section-head">
-        <h2 id="summary-title">剩余可摄入</h2>
+        <h2 id="summary-title">营养摘要</h2>
         <button type="button" id="goals-button" class="button secondary" disabled>管理目标</button>
       </div>
       <form id="day-goal-form" class="day-goal-form" hidden>
@@ -63,22 +66,27 @@
         <select id="day-goal-choice"></select>
         <button type="submit" id="apply-goal" class="button secondary">应用</button>
       </form>
-      <div id="summary" class="summary-grid"></div>
+      <div class="ledger-head"><span>营养素</span><span>摄入 / 目标</span><span>剩余（克）</span></div><div id="summary" class="summary-grid"></div>
     </section>
     <div class="content-grid">
       <section class="card calculator" aria-labelledby="calc-title">
         <div class="section-head">
           <div>
             <h2 id="calc-title">添加摄入</h2>
-            <p class="muted" id="calc-help">按配料表换算实际吃下的营养素。</p>
+            <p class="muted" id="calc-help">输入这次实际摄入的克数。</p>
           </div>
           <button class="text-button" id="reset-food" type="button">清空</button>
         </div>
+
         <div class="segmented" role="group" aria-label="输入方式">
-          <button type="button" id="per100" aria-pressed="true">按每 100 克换算</button>
-          <button type="button" id="direct" aria-pressed="false">直接填摄入量</button>
+          <button type="button" id="direct" aria-pressed="true">直接填写</button>
+          <button type="button" id="per100" aria-pressed="false">每 100 克换算</button>
         </div>
         <form id="intake-form">
+          <fieldset>
+            <legend id="amount-legend">每 100 克含量</legend>
+            <div id="intake-fields" class="nutrient-fields"></div>
+          </fieldset>
           <div class="food-fields">
             <label>食物名称 <small>选填</small>
               <input id="food-name" maxlength="60" placeholder="如无糖酸奶" autocomplete="off">
@@ -87,14 +95,16 @@
               <input id="portion" type="number" inputmode="decimal" min="0.01" max="10000" step="0.01" placeholder="如 60">
             </label>
           </div>
-          <fieldset>
-            <legend id="amount-legend">每 100 克含量</legend>
-            <div id="intake-fields" class="nutrient-fields"></div>
-          </fieldset>
+
           <div class="result" id="result">
             <span class="result-label" id="result-label">换算结果</span>
             <div id="calculated" class="result-values" aria-live="polite"></div>
           </div>
+        <details id="favorites-panel" aria-labelledby="favorites-title" aria-describedby="favorites-hint">
+          <summary id="favorites-title">选择常用食物</summary>
+          <p id="favorites-hint" class="muted">选一个食物即可带入表单。按每 100 克保存的食物还需填份量。</p>
+          <div id="favorites"></div>
+        </details>
           <div class="form-actions">
             <button type="submit" id="add" class="button primary" disabled>记入今天</button>
             <button type="button" id="save-food" class="button secondary" disabled>存为常用</button>
@@ -103,13 +113,6 @@
         </form>
       </section>
       <div class="side">
-        <section class="card" id="favorites-panel" aria-labelledby="favorites-title" aria-describedby="favorites-hint">
-          <div class="section-head">
-            <h2 id="favorites-title">常用食物</h2>
-          </div>
-          <p id="favorites-hint" class="muted">选一个食物即可带入表单。按每 100 克保存的食物还需填份量。</p>
-          <div id="favorites"></div>
-        </section>
         <section class="card" aria-labelledby="records-title">
           <div class="section-head">
             <h2 id="records-title">今日记录</h2>

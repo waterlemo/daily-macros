@@ -1,7 +1,7 @@
 import { apiUrl } from "./config.mjs?v=cos";
 import { nutrients, zero, convert, totals, validAmounts, hasAmount, dateKey, validDate, grams } from "./domain.mjs";
 import { goalData, goalOperation } from "./targets.mjs";
-import { createWeightPanel } from "./weight-panel.mjs";
+import { createWeightPanel } from "./weight-panel.mjs?v=health1";
 
 const $ = id => document.getElementById(id);
 const storageKey = "daily-macros-preview";
@@ -9,7 +9,7 @@ const sessionKey = "daily-macros-session";
 const state = {
   mode: "guest", day: dateKey(), today: dateKey(), ...goalData(null, null), records: [],
   foods: [], directFoods: [], ready: false, busy: false, reading: 0, session: "",
-  method: "per100", foodId: null, recordId: null, pendingEntry: null, goalEditor: null
+  method: "direct", foodId: null, recordId: null, pendingEntry: null, goalEditor: null
 };
 const weight = createWeightPanel({ request, localData, showStatus,
   saveLocal: data => localStorage.setItem(storageKey, JSON.stringify(data)) });
@@ -103,23 +103,18 @@ function render() {
 
 function renderSummary() {
   const consumed = totals(state.records);
-  $("summary").replaceChildren(...nutrients.map(({ key, label, fullLabel, color }) => {
-    const card = element("article", null, "metric " + color);
-    const goal = state.goals?.[key];
-    const balance = goal == null ? null : goal - consumed[key];
-    const amount = element("strong", balance == null ? "—" : grams(Math.abs(balance)));
-    if (balance != null) amount.append(element("small", " 克"));
-    if (balance < 0) amount.classList.add("over");
-    const used = goal == null ? "目标未设置" : "目标 " + grams(goal) + " 克";
-    const details = state.ready
-      ? (balance < 0 ? "已超目标 · " : "") + "已记 " + grams(consumed[key]) + " 克"
-      : "—";
-    const progress = element("progress");
-    progress.max = goal || 1;
-    progress.value = Math.min(consumed[key], goal || 1);
-    progress.hidden = !goal;
-    progress.setAttribute("aria-label", fullLabel + "摄入进度");
-    card.append(element("h3", label), amount, element("p", details), element("p", used), progress);
+  $("summary").replaceChildren(...nutrients.map(({ key, fullLabel }) => {
+    const card = element("article", null, "ledger-row");
+    const used = consumed[key], goal = state.goals?.[key], left = goal == null ? null : goal-used;
+    const balance = element("strong", left == null ? "—" : (left < 0 ? "超出 " : "") + grams(Math.abs(left)), left < 0 ? "over" : "");
+    const ring = element("span", null, "ring");
+    ring.style.setProperty("--arc", (goal ? Math.min(1, used / goal) * 360 : 0) + "deg");
+    ring.setAttribute("aria-hidden","true");
+    const title = element("div", null, "nutrient-name");
+    title.append(ring, element("b", fullLabel));
+    const values = element("div", null, "amount-pair");
+    values.append(element("b", state.ready ? grams(used) : "—"), element("small", goal == null ? " g" : " / "+grams(goal)+" g"));
+    card.append(title, values, balance);
     return card;
   }));
 }
@@ -255,6 +250,7 @@ function renderLists() {
 
 function setMethod(method) {
   state.method = method;
+  $("result").hidden = method === "direct";
   const per100 = method === "per100";
   $("per100").setAttribute("aria-pressed", String(per100));
   $("direct").setAttribute("aria-pressed", String(!per100));
@@ -298,6 +294,7 @@ function clearForm(method = state.method) {
 }
 
 function pickFood(food) {
+  $("favorites-panel").open = false;
   const per100 = Boolean(food.perHundred);
   clearForm(per100 ? "per100" : "direct");
   state.foodId = food.id;
@@ -435,7 +432,7 @@ function leave() {
     today: dateKey(), ...goalData(null, null), records: [], foods: [], directFoods: [], reading: state.reading + 1
   });
   $("goals-dialog").close();
-  clearForm("per100");
+  clearForm("direct");
   showStatus();
 }
 
@@ -451,7 +448,7 @@ function openLogin() {
 
 async function loadAccount(session) {
   Object.assign(state, { mode: "account", session, ready: false, ...goalData(null, null), records: [], foods: [], directFoods: [] });
-  clearForm("per100");
+  clearForm("direct");
   showStatus();
   await load();
 }
@@ -494,7 +491,7 @@ function restoreSession() {
 createFields("intake-fields", "amount-", false);
 createFields("goal-fields", "goal-", true);
 for (const { key } of nutrients) $("goal-" + key).max = "10000";
-setMethod("per100");
+setMethod("direct");
 $("login").addEventListener("click", openLogin);
 $("login-form").addEventListener("submit", signIn);
 $("close-login").addEventListener("click", () => $("login-dialog").close());
@@ -614,4 +611,16 @@ document.addEventListener("visibilitychange", () => {
 });
 setInterval(() => { if (dateKey() !== state.today) refreshDay(); }, 15000);
 render();
+const tone = $("tone");
+const toneKey = "daily-macros-interface-tone";
+try {
+  const savedTone = localStorage.getItem(toneKey);
+  if (Array.from(tone.options).some(option => option.value === savedTone)) tone.value = savedTone;
+} catch { /* The selector also works without browser storage. */ }
+document.documentElement.dataset.tone = tone.value;
+tone.addEventListener("change", () => {
+  document.documentElement.dataset.tone = tone.value;
+  try { localStorage.setItem(toneKey, tone.value); } catch { /* Keep this tab's selection. */ }
+  if (location.hash === "#weight") render();
+});
 void restoreSession();

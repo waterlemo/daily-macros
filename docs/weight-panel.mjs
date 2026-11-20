@@ -25,11 +25,11 @@ function drawTrend(canvas, dates, entries) {
   const x = index => left + (right - left) * index / Math.max(1, dates.length - 1);
   const y = value => bottom - (bottom - top) * (value - start) / (end - start);
   context.font = "12px system-ui, sans-serif";
-  context.fillStyle = "#585e50";
+  context.fillStyle = "#676970";
   context.fillText("kg", 0, 14);
   context.textAlign = "right";
   context.textBaseline = "middle";
-  context.strokeStyle = "#e6e6da";
+  context.strokeStyle = "#e5e6ea";
   for (let index = 0; index <= Math.round((end - start) / step); index++) {
     const value = start + index * step;
     context.fillText(kg(value * 1000), left - 7, y(value));
@@ -44,7 +44,7 @@ function drawTrend(canvas, dates, entries) {
     context.fillText(shortDate(dates[index]), x(index), bottom + 17);
   }
   const points = entries.map(entry => [x(dates.indexOf(entry.date)), y(entry.grams / 1000)]);
-  context.strokeStyle = context.fillStyle = "#3b6145";
+  context.strokeStyle = context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--action").trim();
   context.lineWidth = 2.5;
   context.lineJoin = "round";
   context.beginPath();
@@ -73,6 +73,7 @@ export function createWeightPanel({ request, localData, saveLocal, showStatus })
 
   function render() {
     if (!active) return;
+    $("weight-save").textContent = entries.some(entry => entry.date === day) ? "更新体重" : "保存体重";
     date.max = today;
     date.value = day;
     date.disabled = mode === "guest" || busy;
@@ -88,8 +89,12 @@ export function createWeightPanel({ request, localData, saveLocal, showStatus })
     const last = points.at(-1);
     const difference = last ? last.grams - points[0].grams : 0;
     const range = `${shortDate(dates[0])} – ${shortDate(day)}`;
-    const delta = points.length > 1 ? ` · 变化 ${difference > 0 ? "+" : ""}${kg(difference)} kg` : "";
-    $("weight-summary").textContent = last ? `${range} · 最近 ${kg(last.grams)} kg${delta}` : range;
+    const delta = points.length > 1 ? ` · 较 ${shortDate(points[0].date)} ${difference > 0 ? "+" : ""}${kg(difference)} kg` : "";
+    const headline = document.createElement("strong");
+    headline.textContent = last ? kg(last.grams) + " kg" : "—";
+    const contextLine = document.createElement("small");
+    contextLine.textContent = last ? shortDate(last.date) + " 最近一次" + delta : range;
+    $("weight-summary").replaceChildren(headline, contextLine);
     canvas.setAttribute("aria-label", `${period} 日体重趋势，${points.length} 条记录${delta}`);
     $("weight-chart-wrap").hidden = !points.length;
     $("weight-empty").hidden = Boolean(points.length);
