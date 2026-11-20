@@ -221,21 +221,27 @@ dialog { padding: 0; }
 #weight-unit{color:var(--muted);font-size:15px;font-weight:400}
 #weight-form #weight-date {
   position: relative;
-  padding-inline: 22px;
-  text-align: center;
+  align-self: center;
+  height: 1.5em;
+  line-height: 1.5;
+  padding-inline: 0 24px;
+  text-align: right;
 }
 #weight-date::-webkit-datetime-edit {
   flex: none;
-  margin-inline: auto;
+  margin-inline: auto 0;
   padding: 0;
 }
 #weight-date::-webkit-date-and-time-value {
-  margin-inline: auto;
-  text-align: center;
+  margin: 0;
+  line-height: 1.5;
+  text-align: right;
 }
 #weight-date::-webkit-calendar-picker-indicator {
   position: absolute;
   inset-inline-end: 0;
+  top: 50%;
+  transform: translateY(-50%);
   margin: 0;
 }
 #weight-form #weight-save{height:48px;width:100%;justify-self:stretch;grid-column:auto}
