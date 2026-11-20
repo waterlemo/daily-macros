@@ -12,8 +12,8 @@
   <link rel="icon" href="./icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./style.css?v=goals">
-  <script type="module" src="./app.mjs?v=direct-foods"></script>
+  <link rel="stylesheet" href="./style.css?v=weight">
+  <script type="module" src="./app.mjs?v=weight"></script>
 </head>
 <body>
   <header class="top">
@@ -29,7 +29,20 @@
       </div>
     </div>
   </header>
-  <main class="shell">
+  <div class="shell app-layout">
+  <aside class="app-sidebar">
+    <nav aria-label="记录分区">
+      <a id="nav-intake" href="#intake" aria-current="page">饮食</a>
+      <a id="nav-weight" href="#weight">体重</a>
+    </nav>
+  </aside>
+  <main>
+    <div class="notice" id="guest">
+      <p id="guest-copy">登录后可查看你的私有记录，并在不同设备上继续记。</p>
+      <button type="button" id="preview" class="text-button">在本机试用</button>
+    </div>
+    <p id="status" role="status" aria-live="polite" hidden></p>
+    <div id="intake-view">
     <section class="welcome" aria-labelledby="day-title">
       <div>
         <p id="date-label" class="date-label"></p>
@@ -40,11 +53,6 @@
         <input id="day" type="date" aria-label="查看日期">
       </div>
     </section>
-    <div class="notice" id="guest">
-      <p id="guest-copy">登录后可查看你的私有记录，并在不同设备上继续记。</p>
-      <button type="button" id="preview" class="text-button">在本机试用</button>
-    </div>
-    <p id="status" role="status" aria-live="polite" hidden></p>
     <section class="card summary" aria-labelledby="summary-title">
       <div class="section-head">
         <h2 id="summary-title">剩余可摄入</h2>
@@ -111,7 +119,41 @@
         </section>
       </div>
     </div>
+    </div>
+    <div id="weight-view" hidden>
+      <section class="welcome" aria-labelledby="weight-title">
+        <h1 id="weight-title">体重记录</h1>
+        <button id="weight-today" class="button quiet" type="button" hidden>回到今天</button>
+      </section>
+      <section class="card" aria-labelledby="weight-entry-title">
+        <h2 id="weight-entry-title">记录体重</h2>
+        <form id="weight-form">
+          <label>日期 <input id="weight-date" type="date" required disabled></label>
+          <label>体重 <small>公斤</small>
+            <input id="weight-amount" type="number" inputmode="decimal" min="0.1" max="1000" step="0.01" placeholder="如 72.50" required disabled>
+          </label>
+          <button id="weight-save" class="button primary" type="submit" disabled>保存</button>
+        </form>
+        <p id="weight-status" role="status" hidden></p>
+      </section>
+      <section class="card weight-trend" aria-labelledby="weight-trend-title">
+        <div class="section-head">
+          <h2 id="weight-trend-title">体重趋势</h2>
+          <div id="weight-period" class="weight-period" role="group" aria-label="趋势时间范围">
+            <button type="button" data-days="7" aria-pressed="true">7 日</button>
+            <button type="button" data-days="30" aria-pressed="false">30 日</button>
+          </div>
+        </div>
+        <p id="weight-summary" class="muted"></p>
+        <div id="weight-chart-wrap" hidden>
+          <canvas id="weight-chart" role="img" aria-label="体重趋势图"></canvas>
+        </div>
+        <p id="weight-empty" class="muted empty">登录或在本机试用后，可以记录体重。</p>
+        <ul id="weight-list" class="weight-list" aria-label="区间内的体重记录"></ul>
+      </section>
+    </div>
   </main>
+  </div>
   <dialog id="login-dialog" aria-labelledby="login-title">
     <form id="login-form">
       <div class="section-head">

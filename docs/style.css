@@ -31,6 +31,12 @@ small { color: var(--muted); font-weight: 400; font-size: .77em; }
 .brand-mark i:nth-child(2) { height: 14px; background: #c3d6b0; }
 .brand-mark i:nth-child(3) { height: 11px; background: #e6daf2; }
 main { padding-bottom: 40px; }
+.app-layout { display: grid; grid-template-columns: 130px minmax(0, 1fr); align-items: start; gap: 22px; padding-top: 22px; }
+.app-sidebar { position: sticky; top: 18px; }
+.app-sidebar nav { display: flex; flex-direction: column; gap: 4px; }
+.app-sidebar a { padding: 11px 14px; min-height: 44px; border-radius: 10px; color: var(--muted); text-decoration: none; font-weight: 650; }
+.app-sidebar a[aria-current="page"] { color: var(--green); background: #e8efe2; }
+main > .notice { margin-bottom: 0; }
 .welcome { margin: 38px 0 22px; }
 .date-label { margin-bottom: 8px; color: var(--muted); font-size: .91rem; font-weight: 600; }
 .button { min-height: 44px; padding: 8px 14px; border: 1px solid transparent; border-radius: 10px; font-size: .9rem; font-weight: 680; }
@@ -43,8 +49,8 @@ main { padding-bottom: 40px; }
 .text-button:hover:enabled { text-decoration: underline; }
 .muted { color: var(--muted); font-size: .89rem; line-height: 1.55; }
 .notice { border: 1px solid #dde4d4; background: #edf1e6; border-radius: 12px; padding: 4px 14px; margin-bottom: 15px; font-size: .88rem; }
-#status, #goal-status, #login-status { margin: 12px 0; padding: 11px 14px; border-radius: 10px; background: #e8efe2; color: #324c35; font-size: .88rem; }
-#status[data-error="true"], #goal-status[data-error="true"], #login-status[data-error="true"] { background: #f7e4dc; color: #713522; }
+#status, #goal-status, #login-status, #weight-status { margin: 12px 0; padding: 11px 14px; border-radius: 10px; background: #e8efe2; color: #324c35; font-size: .88rem; }
+#status[data-error="true"], #goal-status[data-error="true"], #login-status[data-error="true"], #weight-status[data-error="true"] { background: #f7e4dc; color: #713522; }
 .card { background: #fffefa; border: 1px solid var(--line); border-radius: 18px; padding: 22px; }
 .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 15px; }
 .day-goal-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
@@ -104,7 +110,22 @@ dialog .nutrient-fields { margin: 16px 0; }
 .goal-profiles-heading, #goal-name-field { margin-top: 14px; }
 .passphrase-field { margin: 16px 0; }
 .passphrase-field input { display: block; width: 100%; margin-top: 6px; }
+#weight-form { display: grid; grid-template-columns: minmax(0, 185px) minmax(0, 150px) auto; align-items: end; justify-content: start; gap: 10px; margin-top: 16px; }
+.weight-trend { margin-top: 16px; }
+.weight-period { display: flex; gap: 2px; background: #f0f0e8; padding: 3px; border-radius: 10px; flex-shrink: 0; }
+.weight-period button { min-height: 40px; border: 1px solid transparent; border-radius: 8px; padding: 5px 12px; background: transparent; color: var(--muted); }
+.weight-period button[aria-pressed="true"] { background: #fffefa; color: var(--green); border-color: var(--line); font-weight: 650; }
+#weight-summary { margin: 8px 0 3px; }
+#weight-chart { display: block; width: 100%; height: 245px; }
+.weight-list { padding: 0; margin: 8px 0 0; list-style: none; }
+.weight-list li + li { border-top: 1px solid var(--line); }
+.weight-list button { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; padding-inline: 5px; }
+.weight-list button strong { color: #23291f; font-variant-numeric: tabular-nums; }
 @media (max-width: 780px) {
+  .app-layout { display: block; padding-top: 12px; }
+  .app-sidebar { position: static; margin-bottom: 12px; }
+  .app-sidebar nav { flex-direction: row; gap: 6px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .app-sidebar a { text-align: center; min-width: 72px; }
   .content-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
   .side { gap: 12px; }
   .shell { width: calc(100% - 32px); }
@@ -124,4 +145,6 @@ dialog .nutrient-fields { margin: 16px 0; }
   .notice .text-button, #account-label { flex-shrink: 0; }
   #account-label { display: none; }
   .result-values b { display: block; margin-left: 0; }
+  #weight-form { grid-template-columns: minmax(0, 1fr) minmax(0, .85fr); }
+  #weight-form button { grid-column: 1 / -1; justify-self: start; }
 }

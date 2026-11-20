@@ -1,6 +1,7 @@
 import { apiUrl } from "./config.mjs?v=cos";
 import { nutrients, zero, convert, totals, validAmounts, hasAmount, dateKey, validDate, grams } from "./domain.mjs";
 import { goalData, goalOperation } from "./targets.mjs";
+import { createWeightPanel } from "./weight-panel.mjs";
 
 const $ = id => document.getElementById(id);
 const storageKey = "daily-macros-preview";
@@ -10,6 +11,8 @@ const state = {
   foods: [], directFoods: [], ready: false, busy: false, reading: 0, session: "",
   method: "per100", foodId: null, recordId: null, pendingEntry: null, goalEditor: null
 };
+const weight = createWeightPanel({ request, localData, showStatus,
+  saveLocal: data => localStorage.setItem(storageKey, JSON.stringify(data)) });
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -59,6 +62,11 @@ function render() {
   const active = state.mode !== "guest";
   const editable = state.ready && !state.busy;
   const isToday = state.day === state.today;
+  const weightActive = location.hash === "#weight";
+  $("intake-view").hidden = weightActive;
+  $("weight-view").hidden = !weightActive;
+  $(weightActive ? "nav-intake" : "nav-weight").removeAttribute("aria-current");
+  $(weightActive ? "nav-weight" : "nav-intake").setAttribute("aria-current", "page");
   $("login").hidden = signedIn;
   $("login").disabled = state.busy;
   $("logout").hidden = !active;
@@ -90,6 +98,7 @@ function render() {
   if ($("goals-dialog").open) renderGoalManager();
   renderLists();
   updateCalculation();
+  weight.sync({ active: weightActive, mode: state.mode, today: state.today });
 }
 
 function renderSummary() {
@@ -493,6 +502,10 @@ $("login-dialog").addEventListener("cancel", event => {
   if ($("submit-login").disabled) event.preventDefault();
 });
 $("logout").addEventListener("click", leave);
+window.addEventListener("hashchange", () => {
+  render();
+  window.scrollTo(0, 0);
+});
 $("preview").addEventListener("click", () => {
   state.mode = "demo";
   showStatus();

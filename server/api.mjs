@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { hasAmount, validAmounts, validDate } from "../docs/domain.mjs";
 import { entryIdPattern, GoalError, goalData, goalOperation } from "../docs/targets.mjs";
+import { validWeight, weightDates, weightHistory } from "../docs/weight.mjs";
 import { createCosStore } from "./cos-store.mjs";
 
 const sessionLifetime = 30 * 24 * 60 * 60 * 1000;
@@ -94,6 +95,19 @@ function json(data, status, origin) {
   return Response.json(data, { status, headers });
 }
 
+async function weightDashboard(store, date, grams) {
+  const dates = weightDates(date);
+  const months = [...new Set(dates.map(day => day.slice(0, 7)))];
+  const entries = await Promise.all(months.map(async month => {
+    const path = "weights/" + month;
+    if (grams === undefined || month !== date.slice(0, 7)) return store.read(path, {});
+    const result = await store.change(path, {}, values => ({ ...values, [date]: grams }));
+    if (!result) throw new HttpError(409, "另一台设备正在更新，请稍后重试。");
+    return result.value;
+  }));
+  return { entries: weightHistory(Object.assign({}, ...entries), dates) };
+}
+
 export default {
   async fetch(request, env, makeStore = createCosStore) {
     let origin;
@@ -112,14 +126,19 @@ export default {
       const loggingIn = request.method === "POST" && url.pathname === "/auth/login";
       const reading = request.method === "GET" && url.pathname === "/api/day";
       const writing = request.method === "POST" && url.pathname === "/api/change";
-      if (!loggingIn && !reading && !writing) throw new HttpError(404, "这个地址不存在。");
+      const weight = url.pathname === "/api/weight" && ["GET", "POST"].includes(request.method);
+      if (!loggingIn && !reading && !writing && !weight) throw new HttpError(404, "这个地址不存在。");
       const config = authSettings(env);
       if (loggingIn) return json(login(config, (await readBody(request)).passphrase), 200, origin);
       if (!signedIn(config, request.headers.get("Authorization"))) throw new HttpError(401, "请先用口令登录。");
 
-      const body = writing ? await readBody(request) : null;
-      const date = reading ? url.searchParams.get("date") : body.date;
+      const body = request.method === "POST" ? await readBody(request) : null;
+      const date = body ? body.date : url.searchParams.get("date");
       if (!validDate(date)) throw new HttpError(400, "日期无效。");
+      if (weight) {
+        if (body && !validWeight(body.grams)) throw new HttpError(400, "请输入 0.1 至 1,000 公斤的体重，最多两位小数。");
+        return json(await weightDashboard(makeStore(env), date, body?.grams), 200, origin);
+      }
       const operation = writing ? goalOperation(body) ?? readOperation(body) : null;
       const store = makeStore(env);
       const locations = paths(date);
